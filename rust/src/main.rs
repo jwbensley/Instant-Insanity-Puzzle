@@ -1,7 +1,8 @@
-use itertools::Itertools;
+use itertools::{Itertools, Permutations};
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
+    ops::Range,
 };
 
 #[derive(Hash, Eq, PartialEq, Debug)]
@@ -56,12 +57,12 @@ impl Orientation {
 
 #[derive(Debug)]
 struct Cube<'a> {
-    faces: HashMap<Side, Colour>,
+    faces: &'a HashMap<Side, Colour>,
     orientation: &'a Orientation,
 }
 
 impl Cube<'_> {
-    pub fn new(faces: HashMap<Side, Colour>, orientation: &Orientation) -> Cube {
+    pub fn new<'a>(faces: &'a HashMap<Side, Colour>, orientation: &'a Orientation) -> Cube<'a> {
         Cube { faces, orientation }
     }
 
@@ -80,24 +81,27 @@ impl Cube<'_> {
 
 struct Tray<'a> {
     cubes: Vec<Cube<'a>>,
-    cube_order: std::vec::Vec<&'a std::collections::HashMap<Side, Colour>>,
+    cube_order: Vec<usize>,
     cube_orientations: &'a Vec<Orientation>,
+    cube_faces: &'a Vec<HashMap<Side, Colour>>,
 }
 
 impl Tray<'_> {
     pub fn new<'a>(
         cubes: Vec<Cube<'a>>,
-        cube_order: std::vec::Vec<&'a std::collections::HashMap<Side, Colour>>,
+        cube_order: Vec<usize>,
         cube_orientations: &'a Vec<Orientation>,
+        cube_faces: &'a Vec<HashMap<Side, Colour>>,
     ) -> Tray<'a> {
         Tray {
             cubes,
             cube_order,
             cube_orientations,
+            cube_faces,
         }
     }
 
-    pub fn add_cube(mut self, c: Cube) {
+    pub fn add_cube<'a>(&'a mut self, c: Cube<'a>) {
         self.cubes.push(c);
     }
 
@@ -105,11 +109,15 @@ impl Tray<'_> {
         self.cubes.get(i).unwrap()
     }
 
+    pub fn get_cube_faces(&self) -> &Vec<HashMap<Side, Colour>> {
+        self.cube_faces
+    }
+
     pub fn get_cubes(&self) -> &Vec<Cube> {
         &self.cubes
     }
 
-    pub fn get_cubes_order(&self) -> &std::vec::Vec<&std::collections::HashMap<Side, Colour>> {
+    pub fn get_cubes_order(&self) -> &Vec<usize> {
         &self.cube_order
     }
 
@@ -117,10 +125,10 @@ impl Tray<'_> {
         self.cube_orientations
     }
 
-    pub fn get_layout(self) -> String {
+    pub fn get_layout(&self) -> String {
         let cubes_order = self.get_cubes_order();
-        let x: Vec<u32> = cubes_order.iter().map(|x| x + 1).collect(); // [c + 1 for c in cubes_order]
-        let mut layout = String::from(format!("Cube order: {:?}\n", x));
+        let cube_nums: Vec<usize> = cubes_order.iter().map(|x| x + 1).collect();
+        let mut layout = String::from(format!("Cube order: {:?}\n", cube_nums));
 
         for v in VISIBLE_LOCATIONS {
             let colours: Vec<&Colour> = self
@@ -145,11 +153,11 @@ impl Tray<'_> {
         return layout;
     }
 
-    pub fn get_num_cubes(self) -> usize {
+    pub fn get_num_cubes(&self) -> usize {
         self.cubes.len()
     }
 
-    pub fn is_solved(self) -> bool {
+    pub fn is_solved(&self) -> bool {
         // The puzzle is solved when one of each colour is shown alone each side
         // of the tray.
 
@@ -170,39 +178,38 @@ impl Tray<'_> {
         true
     }
 
-    pub fn pop_cube(mut self) -> Cube {
-        self.cubes.pop().unwrap()
+    pub fn pop_cube(&mut self) {
+        self.cubes.pop().unwrap();
     }
 }
 
-fn add_next_cube(t: Tray, mut combinations: u32) -> u32 {
-    let cube_number = t.get_cubes_order()[t.get_num_cubes()];
+fn add_next_cube(mut tray: Tray, mut combinations: u32) -> u32 {
+    let cube_number = tray.get_cubes_order()[tray.get_num_cubes()];
 
-    for orientation in t.get_cube_orientations() {
-        t.add_cube(Cube::new(
-            faces = cubes[cube_number],
-            orientation = orientation,
-        ));
+    let orientations = tray.get_cube_orientations().clone();
+    for orientation in orientations {
+        let x = &tray.get_cube_faces()[cube_number];
+        tray.add_cube(Cube::new(x, orientation));
         combinations += 1;
 
-        if t.get_num_cubes() == t.get_cubes_order().len() {
-            if t.is_solved() {
+        if tray.get_num_cubes() == tray.get_cubes_order().len() {
+            if tray.is_solved() {
                 // print(f"Solved. Checked: {combinations} combinations:")
-                println!("{}", t.get_layout());
+                println!("{}", tray.get_layout());
                 println!("");
             }
         } else {
-            combinations = add_next_cube(t, combinations);
+            combinations = add_next_cube(tray, combinations);
         }
 
-        t.pop_cube();
+        tray.pop_cube();
     }
 
     return combinations;
 }
 
 fn main() {
-    let cubes: Vec<HashMap<Side, Colour>> = Vec::from([
+    let cube_faces: Vec<HashMap<Side, Colour>> = Vec::from([
         HashMap::from([
             (Side::One, Colour::Green),
             (Side::Two, Colour::Blue),
@@ -438,19 +445,22 @@ fn main() {
         ])),
     ]);
 
-    let cube_order_permutations = cubes.iter().permutations(cubes.len());
+    let cube_order_permutations: Vec<Vec<usize>> = (0..cube_faces.len())
+        .permutations(cube_faces.len())
+        .unique()
+        .collect_vec();
 
     //let b = cube_order_permutations.unique();
 
     let max_combinations: usize =
-        cube_order_permutations.clone().count() * (cube_orientations.len().pow(cubes.len() as u32));
+        cube_order_permutations.len() * (cube_orientations.len().pow(cube_faces.len() as u32));
 
     println!("Checking {} combinations...", max_combinations);
 
     let mut combinations = 0;
 
     for cube_order in cube_order_permutations {
-        let t = Tray::new(Vec::new(), cube_order, &cube_orientations);
+        let t = Tray::new(Vec::new(), cube_order, &cube_orientations, &cube_faces);
         combinations = add_next_cube(t, combinations);
     }
 

@@ -7,3 +7,11 @@ edition = "2024"
 itertools = "0.14.0"
 phf = "0.13.1"
 phf_macros = "0.13.1"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+panic = "abort"
+
+[build]
+rustflags = ["-C", "target-cpu=native"]
