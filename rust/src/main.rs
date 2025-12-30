@@ -5,7 +5,7 @@ use std::{
     ops::Range,
 };
 
-#[derive(Hash, Eq, PartialEq, Debug)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone)]
 enum Colour {
     Blue,
     Green,
@@ -13,7 +13,7 @@ enum Colour {
     Yellow,
 }
 
-#[derive(Hash, Eq, PartialEq, Debug)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone)]
 enum Side {
     One,
     Two,
@@ -57,12 +57,12 @@ impl Orientation {
 
 #[derive(Debug)]
 struct Cube<'a> {
-    faces: &'a HashMap<Side, Colour>,
+    faces: HashMap<Side, Colour>,
     orientation: &'a Orientation,
 }
 
 impl Cube<'_> {
-    pub fn new<'a>(faces: &'a HashMap<Side, Colour>, orientation: &'a Orientation) -> Cube<'a> {
+    pub fn new<'a>(faces: HashMap<Side, Colour>, orientation: &'a Orientation) -> Cube<'a> {
         Cube { faces, orientation }
     }
 
@@ -109,8 +109,8 @@ impl Tray<'_> {
         self.cubes.get(i).unwrap()
     }
 
-    pub fn get_cube_faces(&self) -> &Vec<HashMap<Side, Colour>> {
-        self.cube_faces
+    pub fn get_cube_face(&self, index: usize) -> HashMap<Side, Colour> {
+        self.cube_faces[index].clone()
     }
 
     pub fn get_cubes(&self) -> &Vec<Cube> {
@@ -183,13 +183,13 @@ impl Tray<'_> {
     }
 }
 
-fn add_next_cube(mut tray: Tray, mut combinations: u32) -> u32 {
+fn add_next_cube(tray: &mut Tray, mut combinations: u32) -> u32 {
     let cube_number = tray.get_cubes_order()[tray.get_num_cubes()];
 
-    let orientations = tray.get_cube_orientations().clone();
+    let faces = tray.get_cube_face(cube_number);
+    let orientations = Vec::new(); //tray.get_cube_orientations().clone();
     for orientation in orientations {
-        let x = &tray.get_cube_faces()[cube_number];
-        tray.add_cube(Cube::new(x, orientation));
+        tray.add_cube(Cube::new(faces, orientation));
         combinations += 1;
 
         if tray.get_num_cubes() == tray.get_cubes_order().len() {
@@ -460,8 +460,8 @@ fn main() {
     let mut combinations = 0;
 
     for cube_order in cube_order_permutations {
-        let t = Tray::new(Vec::new(), cube_order, &cube_orientations, &cube_faces);
-        combinations = add_next_cube(t, combinations);
+        let mut tray = Tray::new(Vec::new(), cube_order, &cube_orientations, &cube_faces);
+        combinations = add_next_cube(&mut tray, combinations);
     }
 
     println!("Finished. Checked {} combinations", combinations);
