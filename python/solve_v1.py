@@ -412,7 +412,7 @@ cube_order_permutations = [
 ]
 
 
-def add_next_cube(t: Tray, combinations: int) -> int:
+def add_next_cube(t: Tray, checked_combinations: int, winning_combinations: int) -> tuple[int, int]:
     cube_number = t.get_cubes_order()[t.get_num_cubes()]
 
     for orientation in cube_orientations:
@@ -422,30 +422,40 @@ def add_next_cube(t: Tray, combinations: int) -> int:
                 orientation=orientation,
             )
         )
-        combinations += 1
+        checked_combinations += 1
 
         if t.get_num_cubes() == len(t.get_cubes_order()):
             if t.is_solved():
-                # print(f"Solved. Checked: {combinations} combinations:")
-                print(t.get_layout())
-                print("")
+                winning_combinations += 1
+                print(
+                    f"{winning_combinations} winning combinations found "
+                    f"from {checked_combinations} checked combinations"
+                )
+                # print(t.get_layout())
+                # print("")
         else:
-            combinations = add_next_cube(t, combinations)
+            checked_combinations, winning_combinations = add_next_cube(t, checked_combinations, winning_combinations)
 
         t.pop_cube()
 
-    return combinations
+    return checked_combinations, winning_combinations
 
 
 max_combinations = len(cube_order_permutations) * (
     len(cube_orientations) ** len(cubes)
 )
-
 print(f"Checking {max_combinations} combinations...")
 
-combinations = 0
+checked_combinations = 0
+winning_combinations = 0
+
 for cube_order in cube_order_permutations:
     t = Tray(cubes=[], cube_order=cube_order)
-    combinations = add_next_cube(t, combinations)
+    checked_combinations, winning_combinations = add_next_cube(
+        t, checked_combinations, winning_combinations
+        )
 
-print(f"Finished. Checked {combinations} combinations")
+print(
+    f"Finished. Checked {checked_combinations} combinations, found "
+    f"{winning_combinations} winning combinations"
+)

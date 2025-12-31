@@ -7,33 +7,29 @@ Finding all winning permutations...
 ## Python
 
 ```shell
-$time ./python/solve_v1.py
+$ python3 --version
+Python 3.12.3
 
-Finished. Checked 8308800 combinations
 
-real    0m26,314s
-user    0m26,294s
+$ time ./python/solve_v1.py
+
+real    0m49,647s
+user    0m49,541s
+sys     0m0,034s
+
+
+$ time ./python/solve_v2.py
+
+real    0m32,177s
+user    0m32,190s
 sys     0m0,017s
-```
 
-```shell
-$time ./python/solve_v2.py
 
-Finished. Checked 8308800 combinations
+$ time /opt/pypy3.11-v7.3.20-linux64/bin/pypy3 ./solve_v2.py
 
-real    0m18,542s
-user    0m18,523s
-sys     0m0,018s
-```
-
-```shell
-$ /opt/pypy3.11-v7.3.19-linux64/bin/pypy3 python/solve_v2.py 
-
-Finished. Checked 8308800 combinations
-
-real    0m3,234s
-user    0m3,181s
-sys     0m0,052s
+real    0m5,243s
+user    0m5,149s
+sys     0m0,080s
 ```
 
 ## Rust
@@ -41,5 +37,9 @@ sys     0m0,052s
 ```shell
 cd rust/
 cargo build -r
-time ...
+$ time ./target/release/cubes 
+
+real    0m5,266s
+user    0m5,243s
+sys     0m0,007s
 ```

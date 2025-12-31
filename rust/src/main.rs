@@ -1,11 +1,10 @@
-use itertools::{Itertools, Permutations};
+use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
-    ops::Range,
 };
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone)]
+#[derive(Hash, Eq, PartialEq, Debug)]
 enum Colour {
     Blue,
     Green,
@@ -13,7 +12,7 @@ enum Colour {
     Yellow,
 }
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone)]
+#[derive(Hash, Eq, PartialEq, Debug)]
 enum Side {
     One,
     Two,
@@ -57,12 +56,12 @@ impl Orientation {
 
 #[derive(Debug)]
 struct Cube<'a> {
-    faces: HashMap<Side, Colour>,
+    faces: &'a HashMap<Side, Colour>,
     orientation: &'a Orientation,
 }
 
 impl Cube<'_> {
-    pub fn new<'a>(faces: HashMap<Side, Colour>, orientation: &'a Orientation) -> Cube<'a> {
+    pub fn new<'a>(faces: &'a HashMap<Side, Colour>, orientation: &'a Orientation) -> Cube<'a> {
         Cube { faces, orientation }
     }
 
@@ -70,9 +69,9 @@ impl Cube<'_> {
         &self.faces[self.orientation.get_side_at_location(location)]
     }
 
-    pub fn get_faces(&self) -> &HashMap<Side, Colour> {
-        &self.faces
-    }
+    // pub fn get_faces(&self) -> &HashMap<Side, Colour> {
+    //     &self.faces
+    // }
 
     pub fn get_orientation(&self) -> &Orientation {
         &self.orientation
@@ -82,17 +81,17 @@ impl Cube<'_> {
 struct Tray<'a> {
     cubes: Vec<Cube<'a>>,
     cube_order: Vec<usize>,
-    cube_orientations: &'a Vec<Orientation>,
-    cube_faces: &'a Vec<HashMap<Side, Colour>>,
+    pub cube_orientations: &'a Vec<Orientation>,
+    pub cube_faces: &'a Vec<HashMap<Side, Colour>>,
 }
 
-impl Tray<'_> {
-    pub fn new<'a>(
-        cubes: Vec<Cube<'a>>,
+impl<'a> Tray<'a> {
+    pub fn new<'b>(
+        cubes: Vec<Cube<'b>>,
         cube_order: Vec<usize>,
-        cube_orientations: &'a Vec<Orientation>,
-        cube_faces: &'a Vec<HashMap<Side, Colour>>,
-    ) -> Tray<'a> {
+        cube_orientations: &'b Vec<Orientation>,
+        cube_faces: &'b Vec<HashMap<Side, Colour>>,
+    ) -> Tray<'b> {
         Tray {
             cubes,
             cube_order,
@@ -101,28 +100,20 @@ impl Tray<'_> {
         }
     }
 
-    pub fn add_cube<'a>(&'a mut self, c: Cube<'a>) {
+    pub fn add_cube<'b>(&'b mut self, c: Cube<'a>) {
         self.cubes.push(c);
     }
 
-    pub fn get_cube(&self, i: usize) -> &Cube {
+    pub fn get_cube(&self, i: usize) -> &Cube<'_> {
         self.cubes.get(i).unwrap()
     }
 
-    pub fn get_cube_face(&self, index: usize) -> HashMap<Side, Colour> {
-        self.cube_faces[index].clone()
-    }
-
-    pub fn get_cubes(&self) -> &Vec<Cube> {
+    pub fn get_cubes(&self) -> &Vec<Cube<'_>> {
         &self.cubes
     }
 
     pub fn get_cubes_order(&self) -> &Vec<usize> {
         &self.cube_order
-    }
-
-    pub fn get_cube_orientations(&self) -> &Vec<Orientation> {
-        self.cube_orientations
     }
 
     pub fn get_layout(&self) -> String {
@@ -183,29 +174,38 @@ impl Tray<'_> {
     }
 }
 
-fn add_next_cube(tray: &mut Tray, mut combinations: u32) -> u32 {
+fn add_next_cube(
+    tray: &mut Tray,
+    mut checked_combinations: u32,
+    mut winning_combinations: u32,
+) -> (u32, u32) {
     let cube_number = tray.get_cubes_order()[tray.get_num_cubes()];
 
-    let faces = tray.get_cube_face(cube_number);
-    let orientations = Vec::new(); //tray.get_cube_orientations().clone();
+    let faces = &tray.cube_faces[cube_number];
+    let orientations = tray.cube_orientations;
     for orientation in orientations {
         tray.add_cube(Cube::new(faces, orientation));
-        combinations += 1;
+        checked_combinations += 1;
 
         if tray.get_num_cubes() == tray.get_cubes_order().len() {
             if tray.is_solved() {
-                // print(f"Solved. Checked: {combinations} combinations:")
-                println!("{}", tray.get_layout());
-                println!("");
+                winning_combinations += 1;
+                println!(
+                    "{} winning combinations found from {} checked combinations",
+                    winning_combinations, checked_combinations
+                )
+                // println!("{}", tray.get_layout());
+                // println!("");
             }
         } else {
-            combinations = add_next_cube(tray, combinations);
+            (checked_combinations, winning_combinations) =
+                add_next_cube(tray, checked_combinations, winning_combinations);
         }
 
         tray.pop_cube();
     }
 
-    return combinations;
+    return (checked_combinations, winning_combinations);
 }
 
 fn main() {
@@ -450,19 +450,22 @@ fn main() {
         .unique()
         .collect_vec();
 
-    //let b = cube_order_permutations.unique();
-
     let max_combinations: usize =
         cube_order_permutations.len() * (cube_orientations.len().pow(cube_faces.len() as u32));
 
     println!("Checking {} combinations...", max_combinations);
 
-    let mut combinations = 0;
+    let mut checked_combinations = 0;
+    let mut winning_combinations = 0;
 
     for cube_order in cube_order_permutations {
         let mut tray = Tray::new(Vec::new(), cube_order, &cube_orientations, &cube_faces);
-        combinations = add_next_cube(&mut tray, combinations);
+        (checked_combinations, winning_combinations) =
+            add_next_cube(&mut tray, checked_combinations, winning_combinations);
     }
 
-    println!("Finished. Checked {} combinations", combinations);
+    println!(
+        "Finished. Checked {} combinations, found {} winning combinations",
+        checked_combinations, winning_combinations
+    )
 }
