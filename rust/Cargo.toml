@@ -7,6 +7,8 @@ edition = "2024"
 itertools = "0.14.0"
 phf = "0.13.1"
 phf_macros = "0.13.1"
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.6"
 
 [profile.release]
 codegen-units = 1

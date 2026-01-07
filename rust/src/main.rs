@@ -1,3 +1,10 @@
+#[cfg(not(target_env = "msvc"))]
+use tikv_jemallocator::Jemalloc;
+
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
@@ -69,10 +76,6 @@ impl Cube<'_> {
         &self.faces[self.orientation.get_side_at_location(location)]
     }
 
-    // pub fn get_faces(&self) -> &HashMap<Side, Colour> {
-    //     &self.faces
-    // }
-
     pub fn get_orientation(&self) -> &Orientation {
         &self.orientation
     }
@@ -133,9 +136,8 @@ impl<'a> Tray<'a> {
         for (idx, cube_num) in cubes_order.iter().enumerate() {
             let cube = self.get_cube(idx);
             layout += format!("Cube {}:\n", cube_num + 1).as_str();
-            // layout += f"Faces {cube.get_faces()}\n"
             for v in VISIBLE_LOCATIONS {
-                layout += format!("{:?}: {:?} ", &v, cube.get_colour_at_location(&v)).as_str(); // cube.get_colour_at_location(v).name
+                layout += format!("{:?}: {:?} ", &v, cube.get_colour_at_location(&v)).as_str();
                 layout +=
                     format!("({:?})\n", cube.get_orientation().get_side_at_location(&v)).as_str();
             }
