@@ -39,7 +39,7 @@ cd rust/
 cargo build -r
 $ time ./target/release/cubes 
 
-real    0m5,266s
-user    0m5,243s
-sys     0m0,007s
+real    0m1,928s
+user    0m1,911s
+sys     0m0,005s
 ```
